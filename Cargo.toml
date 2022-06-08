@@ -1,0 +1,18 @@
+[package]
+name = "peak-metrics"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aws-config = "0.12.0"
+aws-sdk-cloudwatch = "0.12.0"
+tokio = { version = "1", features = ["full"] }
+chrono = "0.4"
+quantogram = "0.4"
+clap = { version = "3.2.8", features = ["derive"] }
+csv = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
