@@ -9,6 +9,8 @@ use config_parser::parse_config;
 use futures::future::join_all;
 use metrics_obj::MetricsObj;
 
+type CWMetricDataPoint = aws_sdk_cloudwatch::model::Datapoint;
+
 async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Error> {
     let config_file = args.config_file.as_ref();
     if config_file.is_none() {
@@ -18,21 +20,7 @@ async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Error> 
         if let Some(metrics) = is_metrics {
             let value_vec: Vec<_> = metrics
                 .iter()
-                .map(|metric| {
-                    let dimensions_vec: Vec<Dimension> = if metric.dimensions.as_ref().is_some() {
-                        build_dimensions_vec(metric)
-                    } else {
-                        Vec::new()
-                    };
-                    fetch_metric_values(
-                        client,
-                        metric.namespace.as_ref().unwrap(),
-                        metric.name.as_ref().unwrap(),
-                        metric.stat.as_ref(),
-                        metric.extended_stat.as_ref(),
-                        dimensions_vec,
-                    )
-                })
+                .map(|metric| fetch_metric_values(client, metric))
                 .collect();
             let _res = join_all(value_vec).await;
             println!("{:?}", _res);
@@ -42,20 +30,7 @@ async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Error> 
 }
 
 async fn get_single_metric_info(args: &MetricsObj, client: &Client) -> Result<(), Error> {
-    let metric_name = args.name.as_ref().unwrap().as_str();
-    let metric_namespace = args.namespace.as_ref().unwrap().as_str();
-    let stat = args.stat.as_ref();
-    let extended_stat = args.extended_stat.as_ref();
-    let dimensions_vec = build_dimensions_vec(args);
-    let values = fetch_metric_values(
-        client,
-        metric_namespace,
-        metric_name,
-        stat,
-        extended_stat,
-        dimensions_vec,
-    )
-    .await?;
+    let values = fetch_metric_values(client, args).await?;
 
     for value in values {
         println!("{:?}", value);
@@ -65,30 +40,34 @@ async fn get_single_metric_info(args: &MetricsObj, client: &Client) -> Result<()
 }
 
 fn build_dimensions_vec(args: &MetricsObj) -> Vec<Dimension> {
-    let dimensions_vec = args
-        .dimensions
-        .as_ref()
-        .unwrap()
-        .iter()
-        .map(|value| {
-            let dimension_vec = value.split('=').collect::<Vec<&str>>();
-            Dimension::builder()
-                .name(dimension_vec[0])
-                .value(dimension_vec[1])
-                .build()
-        })
-        .collect::<Vec<Dimension>>();
+    let dimensions_vec = if args.dimensions.as_ref().is_some() {
+        args.dimensions
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|value| {
+                let dimension_vec = value.split('=').collect::<Vec<&str>>();
+                Dimension::builder()
+                    .name(dimension_vec[0])
+                    .value(dimension_vec[1])
+                    .build()
+            })
+            .collect::<Vec<Dimension>>()
+    } else {
+        Vec::new()
+    };
     dimensions_vec
 }
 
 async fn fetch_metric_values(
     client: &Client,
-    metric_namespace: &str,
-    metric_name: &str,
-    stat: Option<&String>,
-    extended_stat: Option<&String>,
-    dimensions_vec: Vec<Dimension>,
-) -> Result<Vec<aws_sdk_cloudwatch::model::Datapoint>, Error> {
+    args: &MetricsObj,
+) -> Result<Vec<CWMetricDataPoint>, Error> {
+    let metric_name = args.name.as_ref().unwrap().as_str();
+    let metric_namespace = args.namespace.as_ref().unwrap().as_str();
+    let stat = args.stat.as_ref();
+    let extended_stat = args.extended_stat.as_ref();
+    let dimensions_vec = build_dimensions_vec(args);
     let mut cw_query_client = client
         .get_metric_statistics()
         .namespace(metric_namespace)
