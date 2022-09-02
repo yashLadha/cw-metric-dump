@@ -1,16 +1,15 @@
 mod config_parser;
-mod metric_obj;
-mod args_obj;
+mod metrics_obj;
 
-use clap::Parser;
-use futures::future::join_all;
-use args_obj::Args;
 use aws_config::profile::ProfileFileCredentialsProvider;
 use aws_sdk_cloudwatch::{model::Dimension, types::DateTime, Client, Error, Region};
 use chrono::{Duration, TimeZone, Utc};
+use clap::Parser;
 use config_parser::parse_config;
+use futures::future::join_all;
+use metrics_obj::MetricsObj;
 
-async fn get_peak_time(client: &Client, args: &Args) -> Result<(), Error> {
+async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Error> {
     let config_file = args.config_file.as_ref();
     if config_file.is_none() {
         get_single_metric_info(args, client).await?;
@@ -21,20 +20,14 @@ async fn get_peak_time(client: &Client, args: &Args) -> Result<(), Error> {
                 .iter()
                 .map(|metric| {
                     let dimensions_vec: Vec<Dimension> = if metric.dimensions.as_ref().is_some() {
-                        metric
-                            .dimensions
-                            .as_ref()
-                            .unwrap()
-                            .iter()
-                            .map(|(k, v)| Dimension::builder().name(k).value(v).build())
-                            .collect()
+                        build_dimensions_vec(metric)
                     } else {
                         Vec::new()
                     };
                     fetch_metric_values(
                         client,
-                        &metric.namespace,
-                        &metric.name,
+                        metric.namespace.as_ref().unwrap(),
+                        metric.name.as_ref().unwrap(),
                         metric.stat.as_ref(),
                         metric.extended_stat.as_ref(),
                         dimensions_vec,
@@ -48,22 +41,12 @@ async fn get_peak_time(client: &Client, args: &Args) -> Result<(), Error> {
     Ok(())
 }
 
-async fn get_single_metric_info(args: &Args, client: &Client) -> Result<(), Error> {
-    let metric_name = args.metric_name.as_ref().unwrap().as_str();
+async fn get_single_metric_info(args: &MetricsObj, client: &Client) -> Result<(), Error> {
+    let metric_name = args.name.as_ref().unwrap().as_str();
     let metric_namespace = args.namespace.as_ref().unwrap().as_str();
     let stat = args.stat.as_ref();
     let extended_stat = args.extended_stat.as_ref();
-    let dimensions_vec = args
-        .dimensions
-        .iter()
-        .map(|value| {
-            let dimension_vec = value.split('=').collect::<Vec<&str>>();
-            Dimension::builder()
-                .name(dimension_vec[0])
-                .value(dimension_vec[1])
-                .build()
-        })
-        .collect::<Vec<Dimension>>();
+    let dimensions_vec = build_dimensions_vec(args);
     let values = fetch_metric_values(
         client,
         metric_namespace,
@@ -79,6 +62,23 @@ async fn get_single_metric_info(args: &Args, client: &Client) -> Result<(), Erro
     }
 
     Ok(())
+}
+
+fn build_dimensions_vec(args: &MetricsObj) -> Vec<Dimension> {
+    let dimensions_vec = args
+        .dimensions
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|value| {
+            let dimension_vec = value.split('=').collect::<Vec<&str>>();
+            Dimension::builder()
+                .name(dimension_vec[0])
+                .value(dimension_vec[1])
+                .build()
+        })
+        .collect::<Vec<Dimension>>();
+    dimensions_vec
 }
 
 async fn fetch_metric_values(
@@ -134,8 +134,13 @@ fn human_readable_time(datetime: DateTime) -> String {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let args = Args::parse();
-    let default_region = Region::new(args.region.to_string());
+    let args = MetricsObj::parse();
+    let default_region = Region::new(
+        args.region
+            .as_ref()
+            .unwrap_or(&"ap-south-1".to_string())
+            .to_string(),
+    );
     let default_profile = option_env!("AWS_DEFAULT_PROFILE");
     let profile_cred_provider = match default_profile {
         Some(profile_name) => ProfileFileCredentialsProvider::builder()
