@@ -34,7 +34,7 @@ pub struct MetricsObj {
     pub start_time: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct MetricOut {
     name: String,
     timestamp: String,

@@ -3,12 +3,15 @@ mod log;
 mod metrics_obj;
 mod start_time_parser;
 
+use std::error;
+
 use aws_config::profile::ProfileFileCredentialsProvider;
 use aws_sdk_cloudwatch::{model::Dimension, types::DateTime, Client, Error, Region};
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use config_parser::parse_config;
 use futures::future::join_all;
+use log::Log;
 use metrics_obj::MetricsObj;
 use start_time_parser::start_time_parse;
 
@@ -16,11 +19,15 @@ use crate::metrics_obj::MetricOut;
 
 type CWMetricDataPoint = aws_sdk_cloudwatch::model::Datapoint;
 
-async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Error> {
+async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Box<dyn error::Error>> {
     let config_file = args.config_file.as_ref();
     if config_file.is_none() {
         get_single_metric_info(args, client).await?;
     } else {
+        let mut logger: Log = Log::new();
+        if is_csv_enable(args) {
+            logger.enable_csv();
+        }
         let is_metrics = parse_config(config_file.unwrap().as_str()).await;
         if let Some(metrics) = is_metrics {
             let value_vec: Vec<_> = metrics
@@ -33,14 +40,16 @@ async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Error> 
                 .filter(|item| item.is_ok())
                 .map(|item| item.unwrap())
                 .collect();
-            (0..metrics.len()).for_each(|index| {
-                res.get(index).into_iter().for_each(|values| {
+            for index in 0..metrics.len() {
+                for values in res.get(index).into_iter() {
                     for item in values {
-                        build_metric_output(&metrics[index], item);
+                        let metric_out = build_metric_output(&metrics[index], item);
+                        logger.write(&metric_out)?;
                     }
-                });
-            });
+                }
+            }
         }
+        logger.close()?;
     }
     Ok(())
 }
@@ -185,8 +194,16 @@ fn human_readable_time(datetime: DateTime) -> String {
     dt.to_rfc3339()
 }
 
+fn is_csv_enable(args: &MetricsObj) -> bool {
+    if let Some(csv_val) = args.csv {
+        csv_val
+    } else {
+        false
+    }
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<(), Box<dyn error::Error>> {
     let args = MetricsObj::parse();
     let default_region = Region::new(
         args.region

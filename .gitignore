@@ -71,4 +71,7 @@ Cargo.lock
 # Ignore code-workspaces
 *.code-workspace
 
+# Ignore csv files generated
+*.csv
+
 # End of https://www.toptal.com/developers/gitignore/api/rust,osx,visualstudiocode
