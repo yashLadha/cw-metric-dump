@@ -74,4 +74,6 @@ Cargo.lock
 # Ignore csv files generated
 *.csv
 
+# Ignore any test file
+test/*.json
 # End of https://www.toptal.com/developers/gitignore/api/rust,osx,visualstudiocode
