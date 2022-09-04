@@ -66,43 +66,42 @@ async fn get_single_metric_info(args: &MetricsObj, client: &Client) -> Result<()
 
 fn build_metric_output(metrics_arg: &MetricsObj, value: &CWMetricDataPoint) -> MetricOut {
     let mut metric_out = MetricOut::builder();
-    metric_out = metric_out.name(metrics_arg.name.as_ref().unwrap().to_string());
-    metric_out = metric_out.timestamp(human_readable_time(value.timestamp.unwrap()));
+    metric_out.name(metrics_arg.name.as_ref().unwrap().to_string());
+    metric_out.timestamp(human_readable_time(value.timestamp.unwrap()));
     if let Some(extended_stat_str) = metrics_arg.extended_stat.as_ref() {
         if let Some(extended_stat_map) = value.extended_statistics.as_ref() {
             if let Some(extended_stat_val) = extended_stat_map.get(extended_stat_str) {
-                metric_out = metric_out.extended_stat(extended_stat_str.to_string());
-                metric_out =
-                    metric_out.extended_stat_value(extended_stat_val.to_owned().to_string());
+                metric_out.extended_stat(extended_stat_str.to_string());
+                metric_out.extended_stat_value(extended_stat_val.to_owned().to_string());
             }
         }
     }
     if let Some(stat) = metrics_arg.stat.as_ref() {
-        metric_out = metric_out.stat(stat.to_string());
+        metric_out.stat(stat.to_string());
         match stat.as_str() {
             "SampleCount" => {
                 if let Some(sample_cnt_val) = value.sample_count().as_ref() {
-                    metric_out = metric_out.stat_value(sample_cnt_val.to_string());
+                    metric_out.stat_value(sample_cnt_val.to_string());
                 }
             }
             "Sum" => {
                 if let Some(sum_val) = value.sum().as_ref() {
-                    metric_out = metric_out.stat_value(sum_val.to_string());
+                    metric_out.stat_value(sum_val.to_string());
                 }
             }
             "Maximum" => {
                 if let Some(max_val) = value.maximum().as_ref() {
-                    metric_out = metric_out.stat_value(max_val.to_string());
+                    metric_out.stat_value(max_val.to_string());
                 }
             }
             "Average" => {
                 if let Some(avg_val) = value.average().as_ref() {
-                    metric_out = metric_out.stat_value(avg_val.to_string());
+                    metric_out.stat_value(avg_val.to_string());
                 }
             }
             "Minimum" => {
                 if let Some(min_val) = value.minimum().as_ref() {
-                    metric_out = metric_out.stat_value(min_val.to_string());
+                    metric_out.stat_value(min_val.to_string());
                 }
             }
             _ => panic!("Unsupported stat {} passed in metric", stat),

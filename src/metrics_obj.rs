@@ -56,33 +56,27 @@ impl MetricOut {
         }
     }
 
-    pub fn name(mut self, arg: String) -> MetricOut {
+    pub fn name(&mut self, arg: String) {
         self.name = arg;
-        self
     }
 
-    pub fn timestamp(mut self, arg: String) -> MetricOut {
+    pub fn timestamp(&mut self, arg: String) {
         self.timestamp = arg;
-        self
     }
 
-    pub fn extended_stat(mut self, arg: String) -> MetricOut {
+    pub fn extended_stat(&mut self, arg: String) {
         self.extended_stat = arg;
-        self
     }
 
-    pub fn extended_stat_value(mut self, arg: String) -> MetricOut {
+    pub fn extended_stat_value(&mut self, arg: String) {
         self.extended_stat_value = arg;
-        self
     }
 
-    pub fn stat_value(mut self, arg: String) -> MetricOut {
+    pub fn stat_value(&mut self, arg: String) {
         self.stat_value = arg;
-        self
     }
 
-    pub fn stat(mut self, arg: String) -> MetricOut {
+    pub fn stat(&mut self, arg: String) {
         self.stat = arg;
-        self
     }
 }
