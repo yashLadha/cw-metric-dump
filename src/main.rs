@@ -19,7 +19,7 @@ use crate::metrics_obj::MetricOut;
 
 type CWMetricDataPoint = aws_sdk_cloudwatch::model::Datapoint;
 
-async fn get_peak_time(client: &Client, args: &MetricsObj) -> Result<(), Box<dyn error::Error>> {
+async fn get_metric_data(client: &Client, args: &MetricsObj) -> Result<(), Box<dyn error::Error>> {
     let config_file = args.config_file.as_ref();
     if config_file.is_none() {
         get_single_metric_info(args, client).await?;
@@ -225,5 +225,5 @@ async fn main() -> Result<(), Box<dyn error::Error>> {
         .load()
         .await;
     let cloudwatch_client = Client::new(&shared_config);
-    get_peak_time(&cloudwatch_client, &args).await
+    get_metric_data(&cloudwatch_client, &args).await
 }
