@@ -76,6 +76,10 @@ fn build_metric_output(metrics_arg: &MetricsObj, value: &CWMetricDataPoint) -> M
             }
         }
     }
+    if let Some(dimensions) = metrics_arg.dimensions.as_ref() {
+        let dimension_str = dimensions.join(",");
+        metric_out.dimension(dimension_str);
+    }
     if let Some(stat) = metrics_arg.stat.as_ref() {
         metric_out.stat(stat.to_string());
         match stat.as_str() {

@@ -37,6 +37,7 @@ pub struct MetricsObj {
 #[derive(Debug, Serialize)]
 pub struct MetricOut {
     name: String,
+    dimension: String,
     timestamp: String,
     extended_stat: String,
     extended_stat_value: String,
@@ -48,6 +49,7 @@ impl MetricOut {
     pub fn builder() -> MetricOut {
         MetricOut {
             name: String::new(),
+            dimension: String::new(),
             timestamp: String::new(),
             extended_stat: String::new(),
             extended_stat_value: String::new(),
@@ -62,6 +64,10 @@ impl MetricOut {
 
     pub fn timestamp(&mut self, arg: String) {
         self.timestamp = arg;
+    }
+
+    pub fn dimension(&mut self, arg: String) {
+        self.dimension = arg;
     }
 
     pub fn extended_stat(&mut self, arg: String) {
